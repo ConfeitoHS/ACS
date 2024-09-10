@@ -25,7 +25,7 @@
         var a = new Date(timestamp);
         const pad = (num) => { if (num < 10) { return '0' + num.toString(); } else { return num.toString(); } };
         var year = a.getFullYear();
-        var month = a.getMonth();
+        var month = a.getMonth()+1;
         var date = a.getDate();
         var hour = a.getHours();
         var min = a.getMinutes();
