@@ -1,6 +1,6 @@
 (async function () {
 
-    const SHEET_URL = "https://docs.google.com/spreadsheets/d/1aUhG8C-0wVsL_jMPwpkZ4hXMH5zN9sZDM_wGBb4On0w/htmlview";
+    const SHEET_ID = "1aUhG8C-0wVsL_jMPwpkZ4hXMH5zN9sZDM_wGBb4On0w";
     const SHEET_GID = "674481593";
     const BASE_URL = "https://webapi.lowiro.com/webapi/";
     const ME_PATH = "user/me";
@@ -18,6 +18,21 @@
     };
     const alldiff = 4;
 
+
+
+
+    const timeConverter = (timestamp) => {
+        var a = new Date(timestamp);
+        const pad = (num) => { if (num < 10) { return '0' + num.toString(); } else { return num.toString(); } };
+        var year = a.getFullYear();
+        var month = a.getMonth();
+        var date = a.getDate();
+        var hour = a.getHours();
+        var min = a.getMinutes();
+        var sec = a.getSeconds();
+        var time = year + '/' + pad(month) + '/' + pad(date) + ' ' + pad(hour) + ':' + pad(min) + ':' + pad(sec);
+        return time;
+    }
     const _sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min) + min);
     const basicMapper = (entry) => {
@@ -30,7 +45,6 @@
         }
         return [songkey + '_' + diffunits[entry["difficulty"]], entry["score"]];
     };
-
     const fetchURL = async (url) => {
         const response = await fetch(url, { cache: "no-store", credentials: "include" });
         if (!response.ok) {
@@ -46,22 +60,34 @@
         return response.text();
     };
 
-    const getSheet = async () => {
-        const sheet_html = await fetchHTML(SHEET_URL);
-        let sheet_dom = new DOMParser().parseFromString(sheet_html, 'text/html');
-        const res = [];
-        sheet_dom.querySelectorAll(`[id^='${SHEET_GID}R']:not([id$=R0]):not([id$=R1])+td`).forEach((x) => { res.push(x.textContent + '_' + x.nextSibling.textContent) });
-        const title = sheet_dom.title;
-        const ver = title.match(/v\d*.\d*\.?\d*\w?/)[0]
-        console.log(res)
-        return [ver, res];
+    const getSheet = async (sheet) => {
+        try {
+            const sheet_html = await fetchHTML(`https://docs.google.com/spreadsheets/d/${sheet}/htmlview`);
+            let sheet_dom = new DOMParser().parseFromString(sheet_html, 'text/html');
+            const res = [];
+            const scores = [];
+            let last_update = parseInt(sheet_dom.querySelector(`[id^='${674481593}R0']+td+td+td+td+td`).textContent);
+            if (isNaN(last_update)) {
+                last_update = 0;
+            }
+
+            sheet_dom.querySelectorAll(`[id^='${SHEET_GID}R']:not([id$=R0]):not([id$=R1])+td`).forEach((x) => { const key = x.textContent + '_' + x.nextSibling.textContent; res.push(key); scores.push([key, parseInt(x.nextSibling.nextSibling.nextSibling.nextSibling.nextSibling.textContent.replaceAll(',', ''))]); });
+            const title = sheet_dom.title;
+            const ver = title.match(/v\d*.\d*\.?\d*\w?/)[0]
+            console.log(res)
+            return [ver, last_update, res, new Map(scores)];
+        }
+        catch (e) {
+            return [null, null, null, null];
+        }
+
     }
     const getSubscrTS = async () => {
         return (await fetchURL(BASE_URL + ME_PATH))["value"]["arcaea_online_expire_ts"] > 0;
     };
 
     const getScoreData = async (difficulty, page) => {
-        return fetchURL(BASE_URL + SCORE_PATH + "?difficulty=" + difficulty + "&page=" + page + "&sort=title");
+        return fetchURL(BASE_URL + SCORE_PATH + "?difficulty=" + difficulty + "&page=" + page + "&sort=date&term=");
     };
 
     const processFlag = location.href.match(/\/\/arcaea.lowiro.com\/[a-z]{2}\/profile(|\/|\/.*)(\?.*)?$/);
@@ -75,8 +101,13 @@
         if (window.confirm('Arcaea Online에 구독중이 아닙니다. 구독 후 사용해 주세요.')) { }
         return;
     }
-
-    const [sheetVer, sheetNames] = await getSheet();
+    let MY_ID = window.prompt('사용하고 계신 시트의 ID를 입력해주세요(링크 공유 필수). 기본적으로는 빈 시트의 ID가 입력되어있습니다.', SHEET_ID);
+    if (MY_ID == null) return;
+    const [sheetVer, lastUpdateTS, sheetNames, sheetScores] = await getSheet(MY_ID);
+    if (sheetVer == null) {
+        window.alert('시트 불러오기 실패');
+        return;
+    }
     console.log("Neul's Sheet 불러오기 성공")
     console.log(sheetVer)
     const totaldiff = [];
@@ -94,11 +125,16 @@
         window.alert("에러가 발생했습니다.");
         return;
     }
-    const totalpages = pagesall.reduce((x, y) => (x + y), 0);
+    let totalpages = pagesall.reduce((x, y) => (x + y), 0);
     const totalscores = totaldiff.reduce((x, y) => (x + y), 0);
 
+    let namedLastUp = '동기화 기록 없음.'
+    if (lastUpdateTS != 0) {
+        namedLastUp = '마지막 동기화: ' + timeConverter(lastUpdateTS);
+    }
+
     //for (let i = 0; i < alldiff; i++) { scoredata.push([]); }
-    if (window.confirm("본 스크립트는 컨설턴트 시트 " + sheetVer + "에서만 작동합니다. 사용하고 계신 시트의 버전이 이와 맞지 않는 경우, 시트를 미리 업데이트 해 주세요.\n\n" + totaldiff.map((x, i) => (diffnames[i] + ' ' + x)).join(' + ') + ' = ' + totalscores + '개' + "\n\n플레이한 채보가 많으면 시간이 오래 걸릴 수 있습니다. 확인을 누르면 Arcaea Online으로부터 스코어 데이터를 가져옵니다.")) {
+    if (window.confirm(namedLastUp + '\n' + totaldiff.map((x, i) => (diffnames[i] + ' ' + x)).join(' + ') + ' = ' + totalscores + '개' + "\n\n플레이한 채보가 많으면 시간이 오래 걸릴 수 있습니다. 확인을 누르면 Arcaea Online으로부터 스코어 데이터를 가져옵니다.")) {
 
         const top = document.querySelector("section.player-site-content");
 
@@ -165,7 +201,7 @@
 
 
         let currentpage = 0;
-
+        const updateStartTS = Date.now();
         try {
             let lasttime = Date.now();
             let meaninterval = 0;
@@ -176,7 +212,16 @@
                     if (!scoredata["success"]) {
                         throw new Error("스코어를 가져오는 데에 실패했습니다.");
                     }
-                    scoreList.push(...(scoredata["value"]["scores"].map(basicMapper)));
+                    let flag = false;
+                    for (entry of scoredata["value"]["scores"]) {
+                        if (entry['time_played'] < lastUpdateTS) {
+                            flag = true;
+                            break;
+                        }
+                        scoreList.push(basicMapper(entry));
+
+                    }
+
 
                     currentpage++;
                     await _sleep(getRandomInt(600, 1100));
@@ -187,14 +232,22 @@
                     if (currentpage > 5) {
                         progText.innerHTML += `${(Math.round((totalpages - currentpage) * meaninterval / 1000)).toString()}초 남음`;
                     }
+                    if (flag) {
+                        //stop update
+                        progText.innerHTML = `과거에 업데이트 기록이 있습니다.<br>스킵합니다.`;
+                        totalpages -= (pagesall[k] - p);
+                        break;
+                    }
                 }
             }
             console.log('scores collected, converting start');
-            const finalResult = [];
+            const finalResult = [updateStartTS, '점수'];
             const scoreMap = new Map(scoreList);
             for (idx = 0; idx < sheetNames.length; idx++) {
                 if (scoreMap.has(sheetNames[idx])) {
                     finalResult.push(scoreMap.get(sheetNames[idx]));
+                } else if (sheetScores.has(sheetNames[idx])) {
+                    finalResult.push(sheetScores.get(sheetNames[idx]));
                 } else {
                     finalResult.push(0);
                 }
@@ -225,7 +278,7 @@
 
             infoText.textContent = scoreList.length + '개의 기록이 수집되었습니다.';
             progText.textContent = '';
-            finalText.innerHTML = "1. 아래 버튼을 눌러 결과 복사<br>2. 컨설턴트 시트의 필터를 모두 해제<br>3. 업뎃 순으로 오름차순 정렬<br>4. Sayonara Hatsukoi FTR의 점수 기입칸에 붙여넣기";
+            finalText.innerHTML = "1. 아래 버튼을 눌러 결과 복사<br>2. 컨설턴트 시트의 필터를 모두 해제<br>3. 업뎃 순으로 오름차순 정렬<br>4. G열을 클릭하고 붙여넣기";
 
             //window.alert(scoreList.length + '개의 기록이 수집되었습니다.' + "결과가 클립보드에 복사되었습니다. 컨설턴트 시트의 1.필터를 모두 해제하고 2.업뎃 순으로 오름차순 정렬한 후 3.Sayonara Hatsukoi FTR의 점수 기입칸에 붙여넣으세요.");
 
