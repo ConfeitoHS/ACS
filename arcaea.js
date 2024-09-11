@@ -70,6 +70,9 @@
             if (isNaN(last_update)) {
                 last_update = 0;
             }
+            if(last_update<1e12){
+                last_update =  last_update*1000;
+            }
 
             sheet_dom.querySelectorAll(`[id^='${SHEET_GID}R']:not([id$=R0]):not([id$=R1])+td`).forEach((x) => { const key = x.textContent + '_' + x.nextSibling.textContent; res.push(key); scores.push([key, parseInt(x.nextSibling.nextSibling.nextSibling.nextSibling.nextSibling.textContent.replaceAll(',', ''))]); });
             const title = sheet_dom.title;
@@ -201,7 +204,7 @@
 
 
         let currentpage = 0;
-        const updateStartTS = Date.now();
+        const updateStartTS = Math.round(Date.now()/1000);
         try {
             let lasttime = Date.now();
             let meaninterval = 0;
