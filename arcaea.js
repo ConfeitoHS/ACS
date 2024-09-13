@@ -66,7 +66,7 @@
             let sheet_dom = new DOMParser().parseFromString(sheet_html, 'text/html');
             const res = [];
             const scores = [];
-            let last_update = parseInt(sheet_dom.querySelector(`[id^='${674481593}R0']+td+td+td+td+td`).textContent);
+            let last_update = parseInt(sheet_dom.querySelector(`[id^='${674481593}R2']+td+td+td+td+td`).textContent);
             if (isNaN(last_update)) {
                 last_update = 0;
             }
@@ -74,7 +74,7 @@
                 last_update =  last_update*1000;
             }
 
-            sheet_dom.querySelectorAll(`[id^='${SHEET_GID}R']:not([id$=R0]):not([id$=R1])+td`).forEach((x) => { const key = x.textContent + '_' + x.nextSibling.textContent; res.push(key); scores.push([key, parseInt(x.nextSibling.nextSibling.nextSibling.nextSibling.nextSibling.textContent.replaceAll(',', ''))]); });
+            sheet_dom.querySelectorAll(`[id^='${SHEET_GID}R']:not([id$=R0]):not([id$=R1]):not([id$=R2]):not([id$=R3])+td`).forEach((x) => { const key = x.textContent + '_' + x.nextSibling.textContent; res.push(key); scores.push([key, parseInt(x.nextSibling.nextSibling.nextSibling.nextSibling.nextSibling.textContent.replaceAll(',', ''))]); });
             const title = sheet_dom.title;
             const ver = title.match(/v\d*.\d*\.?\d*\w?/)[0]
             console.log(res)
@@ -244,7 +244,7 @@
                 }
             }
             console.log('scores collected, converting start');
-            const finalResult = [updateStartTS, '점수'];
+            const finalResult = ['','',updateStartTS, '점수'];
             const scoreMap = new Map(scoreList);
             for (idx = 0; idx < sheetNames.length; idx++) {
                 if (scoreMap.has(sheetNames[idx])) {
