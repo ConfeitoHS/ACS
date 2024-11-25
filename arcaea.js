@@ -244,7 +244,7 @@
                 }
             }
             console.log('scores collected, converting start');
-            const finalResult = ['','',updateStartTS, '점수'];
+            const finalResult = [updateStartTS, '점수'];
             const scoreMap = new Map(scoreList);
             for (idx = 0; idx < sheetNames.length; idx++) {
                 if (scoreMap.has(sheetNames[idx])) {
@@ -281,7 +281,7 @@
 
             infoText.textContent = scoreList.length + '개의 기록이 수집되었습니다.';
             progText.textContent = '';
-            finalText.innerHTML = "1. 아래 버튼을 눌러 결과 복사<br>2. 컨설턴트 시트의 필터를 모두 해제<br>3. 업뎃 순으로 오름차순 정렬<br>4. G열을 클릭하고 붙여넣기";
+            finalText.innerHTML = "1. 아래 버튼을 눌러 결과 복사<br>2. 컨설턴트 시트의 필터를 모두 해제<br>3. 업뎃 순으로 오름차순 정렬<br>4. G3을 클릭하고 Ctrl+Shift+V";
 
             //window.alert(scoreList.length + '개의 기록이 수집되었습니다.' + "결과가 클립보드에 복사되었습니다. 컨설턴트 시트의 1.필터를 모두 해제하고 2.업뎃 순으로 오름차순 정렬한 후 3.Sayonara Hatsukoi FTR의 점수 기입칸에 붙여넣으세요.");
 
